@@ -31,8 +31,6 @@ chokidar.watch('./*.blend', {})
       if (err) {
         return console.error(`exec error: ${err}`)
       }
-      // Write to stdout just for some quick debugging of our experiment
-      console.log(`stdout: ${stdout}`)
 
       // Convert DAE file into JSON using wavefront-obj-parser
       cp.exec(

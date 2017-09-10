@@ -9,7 +9,6 @@ var mat4ToDualQuat = require('mat4-to-dual-quat')
 var canvas = document.createElement('canvas')
 canvas.width = 600
 canvas.height = 600
-document.body.append(canvas)
 
 // Add click controls to the canvas so that you can click and drag to move the camera
 var isDragging = false
@@ -310,7 +309,6 @@ ws.onmessage = function (message) {
 
     return allActions
   }, {})
-  console.log(actions)
 
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexPosBuffer)
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexData.positions), gl.STATIC_DRAW)
@@ -335,12 +333,15 @@ ws.onmessage = function (message) {
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer)
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertexData.positionIndices), gl.STATIC_DRAW)
 
+  renderActionButtons()
+
   // Keep track of how many indices we need to draw when we call drawElements
   numIndicesToDraw = vertexData.positionIndices.length
 }
 
 var numIndicesToDraw
 var actions
+var currentAction = 'ArmatureAction'
 var clockTime = 0
 var lastStartTime = new Date().getTime()
 function draw () {
@@ -358,7 +359,7 @@ function draw () {
     // on the current time
     var animationData = animationSystem.interpolateJoints({
       currentTime: clockTime,
-      keyframes: actions['ArmatureAction'],
+      keyframes: actions[currentAction],
       jointNums: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 13, 14, 15, 16, 17, 18, 19, 20],
       currentAnimation: {
         startTime: 0,
@@ -408,3 +409,98 @@ function draw () {
   window.requestAnimationFrame(draw)
 }
 draw()
+
+/**
+ * Render the buttons that allow you to change actions
+ */
+var actionButtonsContainer = document.createElement('div')
+actionButtonsContainer.className = 'action-buttons-container'
+
+var actionButtonElems
+/**
+ * Loop through all of the model's actions and create a button that allows
+ * you to select that action
+ */
+function renderActionButtons () {
+  actionButtonsContainer.innerHTML = null
+
+  actionButtonElems = Object.keys(actions)
+  // Right now blender-actions-to-json is duplicating actions for some reason.
+  // Filtering out the duplicates here
+  .filter(function (actionName) {
+    return actionName.indexOf('001') === -1
+  })
+  // Convert each action into a button that will select that action
+  .map(function (actionName) {
+    var actionSelectButton = document.createElement('button')
+    actionSelectButton.innerHTML = actionName
+    actionSelectButton.className = 'action-button'
+    actionSelectButton.setAttribute('action-name', actionName)
+    actionSelectButton.onclick = function () {
+      currentAction = actionName
+      highlightSelectedAction()
+    }
+
+    return actionSelectButton
+  })
+
+  // Add all of the buttons into their container
+  actionButtonElems
+  .forEach(function (actionButton) {
+    actionButtonsContainer.append(actionButton)
+  })
+}
+
+/**
+ * Loop through all of the buttons and highlight the one that is the current action
+ */
+function highlightSelectedAction () {
+  actionButtonElems
+  .forEach(function (actionButton) {
+    actionButton.className = 'action-button ' +
+      (actionButton.getAttribute('action-name') === currentAction ? 'highlighted-action' : '')
+  })
+}
+
+document.body.append(actionButtonsContainer)
+document.body.append(canvas)
+
+/**
+ * Styles
+ */
+var styles = document.createElement('style')
+styles.type = 'text/css'
+styles.innerHTML = `
+.action-buttons-container {
+  margin-bottom: 10px;
+  width: 500px;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.action-button {
+  background-color: #008CBA;
+  border-radius: 5px;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 21px;
+  margin-right: 10px;
+  outline: none;
+  padding: 5px 10px;
+}
+
+.action-button:hover {
+  background-color: #399CBD;
+}
+
+.highlighted-action {
+  background-color: #f44336;
+}
+
+.highlighted-action:hover {
+  background-color: #F78981;
+}
+
+`
+document.head.append(styles)
