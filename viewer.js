@@ -333,6 +333,11 @@ ws.onmessage = function (message) {
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer)
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertexData.positionIndices), gl.STATIC_DRAW)
 
+  currentAnimation = {
+    startTime: currentAnimation.startTime,
+    keyframes: actions[currentAction]
+  }
+
   renderActionButtons()
 
   // Keep track of how many indices we need to draw when we call drawElements
@@ -344,6 +349,12 @@ var actions
 var currentAction = 'ArmatureAction'
 var clockTime = 0
 var lastStartTime = new Date().getTime()
+
+var currentAnimation = {
+  startTime: 0
+}
+var previousAnimation
+
 function draw () {
   var currentTime = new Date().getTime()
 
@@ -359,12 +370,9 @@ function draw () {
     // on the current time
     var animationData = animationSystem.interpolateJoints({
       currentTime: clockTime,
-      keyframes: actions[currentAction],
       jointNums: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 13, 14, 15, 16, 17, 18, 19, 20],
-      currentAnimation: {
-        startTime: 0,
-        range: [0, 1000]
-      }
+      currentAnimation: currentAnimation,
+      previousAnimation: previousAnimation
     })
 
     // Loop through our joint dual quaternions for this frame and send them to the GPU
@@ -437,7 +445,17 @@ function renderActionButtons () {
     actionSelectButton.className = 'action-button'
     actionSelectButton.setAttribute('action-name', actionName)
     actionSelectButton.onclick = function () {
+      previousAnimation = {
+        startTime: currentAnimation.startTime,
+        keyframes: actions[currentAction]
+      }
+
       currentAction = actionName
+
+      currentAnimation = {
+        startTime: clockTime,
+        keyframes: actions[currentAction]
+      }
       highlightSelectedAction()
     }
 
@@ -449,6 +467,8 @@ function renderActionButtons () {
   .forEach(function (actionButton) {
     actionButtonsContainer.append(actionButton)
   })
+
+  highlightSelectedAction()
 }
 
 /**

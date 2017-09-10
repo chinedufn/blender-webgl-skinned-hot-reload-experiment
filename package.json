@@ -45,7 +45,7 @@
     "gl-vec3": "^1.0.3",
     "keyframes-to-dual-quats": "^1.0.0",
     "mat4-to-dual-quat": "^1.0.0",
-    "skeletal-animation-system": "^0.6.5",
+    "skeletal-animation-system": "^0.8.0",
     "wavefront-obj-parser": "^2.0.0",
     "ws": "^3.1.0"
   }
