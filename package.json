@@ -1,0 +1,52 @@
+{
+  "name": "blender-webgl-skinned-hot-reload-experiment",
+  "version": "0.0.1",
+  "description": "An experiment in hot reloading skinned models from Blender to WebGL",
+  "main": "watch-blender-file.js",
+  "scripts": {
+    "start:server": "node watch-blender-file.js",
+    "start:client": "budo viewer.js --open --live",
+    "start": "lil-pids services",
+    "test": "standard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chinedufn/blender-webgl-skinned-hot-reload-experiment.git"
+  },
+  "keywords": [
+    "blender",
+    "webgl",
+    "hot",
+    "reload",
+    "live",
+    "collada",
+    "dae"
+  ],
+  "author": "Chinedu Francis Nwafili <frankie.nwafili@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/chinedufn/blender-webgl-skinned-hot-reload-experiment/issues"
+  },
+  "homepage": "https://github.com/chinedufn/blender-webgl-skinned-hot-reload-experiment#readme",
+  "devDependencies": {
+    "budo": "^10.0.4",
+    "lil-pids": "^2.6.0",
+    "standard": "^10.0.3"
+  },
+  "dependencies": {
+    "blender-actions-to-json": "^1.0.0",
+    "blender-iks-to-fks": "^1.4.0",
+    "chokidar": "^1.7.0",
+    "collada-dae-parser": "^0.13.1",
+    "cuid": "^1.3.8",
+    "expand-vertex-data": "^1.1.2",
+    "gl-mat3": "^1.0.0",
+    "gl-mat4": "^1.1.4",
+    "gl-vec3": "^1.0.3",
+    "keyframes-to-dual-quats": "^1.0.0",
+    "mat4-to-dual-quat": "^1.0.0",
+    "skeletal-animation-system": "^0.6.5",
+    "wavefront-obj-parser": "^2.0.0",
+    "ws": "^3.1.0"
+  }
+}
