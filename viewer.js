@@ -285,13 +285,13 @@ ws.onmessage = function (message) {
   var jointInverseBindPoses = vertexData.jointInverseBindPoses
   vertexData = expandVertexData(vertexData)
 
-  actions = Object.keys(actions)
+  actions = Object.keys(actions.actions)
   // Iterate over each action so that we can process the keyframe times
   .reduce(function (allActions, actionName) {
-    allActions[actionName] = Object.keys(actions[actionName])
+    allActions[actionName] = Object.keys(actions.actions[actionName])
     // Iterate over each keyframe time so that we can process the world bone space pose matrices
     .reduce(function (allKeyframes, keyframeTime) {
-      allKeyframes[keyframeTime] = actions[actionName][keyframeTime]
+      allKeyframes[keyframeTime] = actions.actions[actionName][keyframeTime]
       // Iterate over the matrices so that we can multiply them by inverse bind, and transpose
       // (transpose because they came from Blender which uses row major)
       // After fixing up our matrices we turn them into dual quaternions

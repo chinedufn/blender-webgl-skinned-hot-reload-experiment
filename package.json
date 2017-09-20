@@ -34,7 +34,7 @@
     "standard": "^10.0.3"
   },
   "dependencies": {
-    "blender-actions-to-json": "^1.0.0",
+    "blender-actions-to-json": "^1.4.0",
     "blender-iks-to-fks": "^1.4.0",
     "chokidar": "^1.7.0",
     "collada-dae-parser": "^0.13.1",

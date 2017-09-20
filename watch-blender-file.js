@@ -14,7 +14,7 @@ chokidar.watch('./*.blend', {})
   var jsonPath = modelName + '.json'
   var actionPath = modelName + '-actions.json'
 
-  var exportCommand = `blender model.blend --background --python \`./node_modules/blender-iks-to-fks/bin/ik2fk.js\` --python \`./node_modules/blender-actions-to-json/cmd.js\` --python blender-to-dae.py -- ${actionPath} ${colladaPath}`
+  var exportCommand = `blender model.blend --background --python \`./node_modules/blender-iks-to-fks/bin/ik2fk.js\` --python \`./node_modules/blender-actions-to-json/bin/actions2json.js\` --python blender-to-dae.py -- ${actionPath} ${colladaPath}`
 
   var modelAndActionsReady = false
   var modelData
