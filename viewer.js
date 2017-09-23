@@ -37,10 +37,29 @@ canvas.onmouseup = function () {
   isDragging = false
 }
 
+// As you drag your finger we move the camera
+canvas.addEventListener('touchstart', function (e) {
+  lastX = e.touches[0].clientX
+  lastY = e.touches[0].clientY
+})
+canvas.addEventListener('touchmove', function (e) {
+  e.preventDefault()
+  xCameraRot += (e.touches[0].clientY - lastY) / 50
+  yCameraRot -= (e.touches[0].clientX - lastX) / 50
+
+  xCameraRot = Math.min(xCameraRot, Math.PI / 2.5)
+  xCameraRot = Math.max(xCameraRot, 0.1)
+
+  lastX = e.touches[0].clientX
+  lastY = e.touches[0].clientY
+})
+
 // Get a handle for WebGL context
 var gl = canvas.getContext('webgl')
 gl.clearColor(0.0, 0.0, 0.0, 1.0)
 gl.enable(gl.DEPTH_TEST)
+
+var numJoints = 18
 
 // Create a simple vertex shader to render our geometry
 var vertexGLSL = `
@@ -58,8 +77,8 @@ uniform mat4 uPMatrix;
 uniform mat3 uNMatrix;
 
 // TODO: Variable
-uniform vec4 boneRotQuaternions[20];
-uniform vec4 boneTransQuaternions[20];
+uniform vec4 boneRotQuaternions[${numJoints}];
+uniform vec4 boneTransQuaternions[${numJoints}];
 
 varying vec3 vLightWeighting;
 varying vec2 vUV;
@@ -149,13 +168,12 @@ void main (void) {
 
   vec4 leftHandedPosition = uPMatrix * uMVMatrix * leftWorldSpace;
 
-  // We only have one index right now... so the weight is always 1.
   gl_Position = leftHandedPosition;
 
   vNormal = transformedNormal;
   vUV = aVertexUV;
   // World space is same as model space since model matrix is identity
-  vWorldSpacePos = aVertexPosition;
+  vWorldSpacePos = leftWorldSpace.xyz;
 }
 `
 
@@ -227,11 +245,10 @@ var pMatrixUni = gl.getUniformLocation(shaderProgram, 'uPMatrix')
 var nMatrixUni = gl.getUniformLocation(shaderProgram, 'uNMatrix')
 var cameraPosUni = gl.getUniformLocation(shaderProgram, 'uCameraPos')
 var lightPosUni = gl.getUniformLocation(shaderProgram, 'uLightPos')
-var uSampler = gl.getUniformLocation(shaderProgram, 'uSampler')
 
 var boneRotQuaternions = {}
 var boneTransQuaternions = {}
-for (var i = 0; i < 20; i++) {
+for (var i = 0; i < numJoints; i++) {
   boneRotQuaternions[i] = gl.getUniformLocation(shaderProgram, `boneRotQuaternions[${i}]`)
   boneTransQuaternions[i] = gl.getUniformLocation(shaderProgram, `boneTransQuaternions[${i}]`)
 }
@@ -271,7 +288,7 @@ textureImage.onload = function () {
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureImage)
   imageHasLoaded = true
 }
-textureImage.src = 'baseball-player-uvs.png'
+textureImage.src = 'cowboy-texture.png'
 
 // Open up a websocket connection to our hot reload server.
 // Whenever our server sends us new vertex data we'll update our GPU buffers with the new data.
@@ -281,22 +298,29 @@ var ws = new window.WebSocket('ws://127.0.0.1:8989')
 ws.onmessage = function (message) {
   var messageData = JSON.parse(message.data)
   var vertexData = JSON.parse(messageData.modelData)
-  actions = JSON.parse(messageData.actionData)
-  var jointInverseBindPoses = vertexData.jointInverseBindPoses
+  armature = JSON.parse(messageData.actionData)
+
+  colladaJointIndicesToName = Object.keys(vertexData.jointNamePositionIndex)
+  .reduce(function (indicesToNames, name, index) {
+    indicesToNames[index] = name
+
+    return indicesToNames
+  }, {})
+
   vertexData = expandVertexData(vertexData)
 
-  actions = Object.keys(actions.actions)
+  armature.actions = Object.keys(armature.actions)
   // Iterate over each action so that we can process the keyframe times
   .reduce(function (allActions, actionName) {
-    allActions[actionName] = Object.keys(actions.actions[actionName])
+    allActions[actionName] = Object.keys(armature.actions[actionName])
     // Iterate over each keyframe time so that we can process the world bone space pose matrices
     .reduce(function (allKeyframes, keyframeTime) {
-      allKeyframes[keyframeTime] = actions.actions[actionName][keyframeTime]
+      allKeyframes[keyframeTime] = armature.actions[actionName][keyframeTime]
       // Iterate over the matrices so that we can multiply them by inverse bind, and transpose
       // (transpose because they came from Blender which uses row major)
       // After fixing up our matrices we turn them into dual quaternions
       .map(function (matrix, index) {
-        glMat4.multiply(matrix, jointInverseBindPoses[index], matrix)
+        glMat4.multiply(matrix, armature.inverseBindPoses[index], matrix)
         glMat4.transpose(matrix, matrix)
 
         matrix = mat4ToDualQuat(matrix)
@@ -335,7 +359,7 @@ ws.onmessage = function (message) {
 
   currentAnimation = {
     startTime: currentAnimation.startTime,
-    keyframes: actions[currentAction]
+    keyframes: armature.actions[currentAction]
   }
 
   renderActionButtons()
@@ -345,8 +369,9 @@ ws.onmessage = function (message) {
 }
 
 var numIndicesToDraw
-var actions
-var currentAction = 'ArmatureAction'
+var armature = {}
+var colladaJointIndicesToName
+var currentAction = 'Walk_polish'
 var clockTime = 0
 var lastStartTime = new Date().getTime()
 
@@ -368,21 +393,27 @@ function draw () {
   if (imageHasLoaded && numIndicesToDraw) {
     // Calculate all of our joint dual quaternions for our model, based
     // on the current time
+    var jointNums = []
+    for (var i = 0; i < numJoints; i++) {
+      jointNums.push(i)
+    }
+
     var animationData = animationSystem.interpolateJoints({
       currentTime: clockTime,
-      jointNums: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 13, 14, 15, 16, 17, 18, 19, 20],
+      jointNums: jointNums,
       currentAnimation: currentAnimation,
       previousAnimation: previousAnimation
     })
 
     // Loop through our joint dual quaternions for this frame and send them to the GPU
     // We'll use them for vertex skinning
-    for (var j = 0; j < 20; j++) {
-      var rotQuat = animationData.joints[j].slice(0, 4)
-      var transQuat = animationData.joints[j].slice(4, 8)
+    for (var j = 0; j < numJoints; j++) {
+      var jointName = colladaJointIndicesToName[j].replace(/_/g, '.')
+      var indexToUse = armature.jointNameIndices[jointName]
 
-      gl.uniform4fv(boneRotQuaternions[j], rotQuat)
-      gl.uniform4fv(boneTransQuaternions[j], transQuat)
+      indexToUse = j
+      gl.uniform4fv(boneRotQuaternions[j], animationData.joints[indexToUse].slice(0, 4))
+      gl.uniform4fv(boneTransQuaternions[j], animationData.joints[indexToUse].slice(4, 8))
     }
 
     // Calculate our normal matrix to appropriately transform our normals
@@ -394,7 +425,9 @@ function draw () {
 
     // We create a camera and use it as our view matrix
     var camera = glMat4.create()
-    glMat4.translate(camera, camera, [0, 0, 2.5])
+    var cameraDistance = 18.5
+    // cameraDistance = 2.5
+    glMat4.translate(camera, camera, [0, 0, cameraDistance])
     var yAxisCameraRot = glMat4.create()
     var xAxisCameraRot = glMat4.create()
     glMat4.rotateX(xAxisCameraRot, xAxisCameraRot, -xCameraRot)
@@ -432,7 +465,7 @@ var actionButtonElems
 function renderActionButtons () {
   actionButtonsContainer.innerHTML = null
 
-  actionButtonElems = Object.keys(actions)
+  actionButtonElems = Object.keys(armature.actions)
   // Right now blender-actions-to-json is duplicating actions for some reason.
   // Filtering out the duplicates here
   .filter(function (actionName) {
@@ -447,14 +480,14 @@ function renderActionButtons () {
     actionSelectButton.onclick = function () {
       previousAnimation = {
         startTime: currentAnimation.startTime,
-        keyframes: actions[currentAction]
+        keyframes: armature.actions[currentAction]
       }
 
       currentAction = actionName
 
       currentAnimation = {
         startTime: clockTime,
-        keyframes: actions[currentAction]
+        keyframes: armature.actions[currentAction]
       }
       highlightSelectedAction()
     }
