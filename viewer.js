@@ -411,7 +411,7 @@ function draw () {
       var jointName = colladaJointIndicesToName[j].replace(/_/g, '.')
       var indexToUse = armature.jointNameIndices[jointName]
 
-      indexToUse = j
+      // indexToUse = j
       gl.uniform4fv(boneRotQuaternions[j], animationData.joints[indexToUse].slice(0, 4))
       gl.uniform4fv(boneTransQuaternions[j], animationData.joints[indexToUse].slice(4, 8))
     }
