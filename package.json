@@ -5,7 +5,7 @@
   "main": "watch-blender-file.js",
   "scripts": {
     "start:server": "node watch-blender-file.js",
-    "start:client": "budo viewer.js --open --live",
+    "start:client": "budo viewer.js --host=127.0.0.1 --open --live",
     "start": "lil-pids services",
     "test": "standard"
   },
